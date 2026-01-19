@@ -17,59 +17,43 @@ Note: This will impact Vite dev & build performances.
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-```js
+````js
 export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+  # TanStack Pacer Showcase (React)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+  Single-page showcase app demonstrating TanStack Pacer’s core patterns with interactive demos and live state.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+  ## What’s included
+
+  Each section explains the “why”, then lets you tweak options and watch the state change.
+
+  - **Debouncer**: collapse rapid input changes into one execution after a quiet period.
+  - **Throttler**: enforce at most one execution per time window (with leading/trailing controls).
+  - **Rate Limiter**: hard caps within a window (fixed vs sliding windows, rejections, remaining).
+  - **Queue**: enqueue items, process over time, priority ordering, max size, expiration, batch flush.
+  - **Batching**: collect items into batches by time/size/custom triggers, cancel/flush/reset.
+
+  This project intentionally uses both TanStack Pacer React state subscription patterns:
+
+  - Hook-level selector (3rd argument) to opt into specific state reactivity
+  - Instance `.Subscribe` component for deep/tree subscriptions
+
+  ## Run locally
+
+  ```bash
+  npm install
+  npm run dev
+````
+
+Build:
+
+```bash
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Key files
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `src/App.tsx` — all five demos
+- `src/App.css` + `src/index.css` — layout/theme styles
+- `src/main.tsx` — wraps the app with `PacerProvider`
+  extends: [
