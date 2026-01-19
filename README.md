@@ -1,47 +1,105 @@
-# React + TypeScript + Vite
+# TanStack Pacer Showcase
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive single-page showcase demonstrating the core pacing utilities from TanStack Pacer.
 
-Currently, two official plugins are available:
+This repo contains short, interactive demos for:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Debouncing
+- Throttling
+- Rate limiting
+- Queueing
+- Batching
 
-## React Compiler
+---
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Purpose
 
-Note: This will impact Vite dev & build performances.
+Explore and experiment with timing and execution patterns using adjustable options and live state readouts. Each section contains a short explanation, an interactive demo, and a compact usage snippet showing idiomatic React + TypeScript usage with syntax highlighting.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Quick Comparison
 
-```js
-export default defineConfig([
-  # TanStack Pacer Showcase
+- **Debouncer** — collapse rapid events into a single execution after a quiet period (e.g., input autosave).
+- **Throttler** — enforce a minimum gap between executions (e.g., scroll handlers).
+- **Rate Limiter** — enforce quotas/limits over a moving window (e.g., API quotas).
+- **Queue** — schedule items for processing with priority/expiration/backpressure.
+- **Batching** — collect and process items together for efficient bulk operations.
 
-  A compact interactive showcase demonstrating core pacing utilities from TanStack Pacer.
+---
 
-  Purpose: explore and experiment with timing and execution patterns—debouncing, throttling, rate limiting, queueing, and batching—using adjustable options and live state readouts.
+## Usage Examples (TypeScript)
 
-  About TanStack Pacer
-  - A focused toolkit for controlling when and how functions or items are executed.
-  - Provides utilities like Debouncer, Throttler, Rate Limiter, Queuer, and Batcher for both sync and async workflows.
-  - Built-in reactive state (React adapter) with opt-in selectors and `.Subscribe` for efficient UI updates.
+Debouncer (basic):
 
-  What each section helps with
-  - Debouncer — collapse rapid events into a single execution after a quiet period (e.g., search input, autosave).
-  - Throttler — ensure at most one execution per time window (e.g., scroll/drag handlers, UI updates).
-  - Rate Limiter — enforce hard quotas over a window (e.g., API rate limits, request caps).
-  - Queue — enqueue work and process items over time with priority, expiration, and backpressure control (e.g., upload/background sync).
-  - Batching — collect items and process them together by size/time/custom rules for efficient bulk operations.
+```ts
+import { useDebouncer } from "@tanstack/pacer-react";
 
-  Why Pacer is different
-  - Small, composable primitives focused on pacing concerns rather than a broad framework.
-  - Rich instance API (flush, cancel, start/stop, reset, setOptions) and advanced configuration (dynamic `wait`, `enabled` functions, priority/getShouldExecute hooks).
-  - Reactive state with opt-in selectors and a `Subscribe` component makes UI integration efficient and precise.
+const debouncer = useDebouncer(
+  () => {
+    // called after quiet period
+  },
+  { wait: 300 },
+);
 
-  See the demo implementation in [src/App.tsx](src/App.tsx).
-  extends: [
+// methods: debouncer.execute(), debouncer.cancel(), debouncer.flush()
 ```
+
+Throttler (dynamic wait + selector):
+
+```ts
+import { useThrottler } from "@tanstack/pacer-react";
+
+const throttler = useThrottler(
+  () => doWork(),
+  { wait: () => (fastMode ? 50 : 300) },
+  (s) => ({ isPending: s.isPending, lastExecutedAt: s.lastExecutedAt }),
+);
+
+// call throttler.execute() as user events arrive
+```
+
+Rate Limiter (quota window):
+
+```ts
+import { useRateLimiter } from "@tanstack/pacer-react";
+
+const limiter = useRateLimiter({ limit: 10, per: 60_000 });
+
+// use limiter.maybeExecute(() => fetch(...)) to respect the quota
+```
+
+Queue (priority + expiration):
+
+```ts
+import { useQueuer } from "@tanstack/pacer-react";
+
+const queue = useQueuer({
+  processItem: async (item) => upload(item),
+  getPriority: (item) => item.priority,
+  expirationDuration: 30_000,
+});
+
+queue.addItem({ id: "u1", priority: 10 });
+```
+
+Batching (size/time rules):
+
+```ts
+import { useBatcher } from "@tanstack/pacer-react";
+
+const batcher = useBatcher({
+  flushAtSize: 20,
+  flushAfter: 200, // ms
+  flushHandler: (items) => api.bulkSend(items),
+});
+
+batcher.addItem(item);
+```
+
+---
+
+## Notes
+
+- The React adapter supports optional 3rd-argument selectors for fine-grained subscriptions and a `.Subscribe` component for instance-scoped subscriptions.
+- Instances expose rich methods such as `flush`, `cancel`, `start`/`stop`, `reset`, and `setOptions` for runtime control.
