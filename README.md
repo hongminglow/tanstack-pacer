@@ -17,43 +17,31 @@ Note: This will impact Vite dev & build performances.
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-````js
+```js
 export default defineConfig([
-  # TanStack Pacer Showcase (React)
+  # TanStack Pacer Showcase
 
-  Single-page showcase app demonstrating TanStack Pacer’s core patterns with interactive demos and live state.
+  A compact interactive showcase demonstrating core pacing utilities from TanStack Pacer.
 
-  ## What’s included
+  Purpose: explore and experiment with timing and execution patterns—debouncing, throttling, rate limiting, queueing, and batching—using adjustable options and live state readouts.
 
-  Each section explains the “why”, then lets you tweak options and watch the state change.
+  About TanStack Pacer
+  - A focused toolkit for controlling when and how functions or items are executed.
+  - Provides utilities like Debouncer, Throttler, Rate Limiter, Queuer, and Batcher for both sync and async workflows.
+  - Built-in reactive state (React adapter) with opt-in selectors and `.Subscribe` for efficient UI updates.
 
-  - **Debouncer**: collapse rapid input changes into one execution after a quiet period.
-  - **Throttler**: enforce at most one execution per time window (with leading/trailing controls).
-  - **Rate Limiter**: hard caps within a window (fixed vs sliding windows, rejections, remaining).
-  - **Queue**: enqueue items, process over time, priority ordering, max size, expiration, batch flush.
-  - **Batching**: collect items into batches by time/size/custom triggers, cancel/flush/reset.
+  What each section helps with
+  - Debouncer — collapse rapid events into a single execution after a quiet period (e.g., search input, autosave).
+  - Throttler — ensure at most one execution per time window (e.g., scroll/drag handlers, UI updates).
+  - Rate Limiter — enforce hard quotas over a window (e.g., API rate limits, request caps).
+  - Queue — enqueue work and process items over time with priority, expiration, and backpressure control (e.g., upload/background sync).
+  - Batching — collect items and process them together by size/time/custom rules for efficient bulk operations.
 
-  This project intentionally uses both TanStack Pacer React state subscription patterns:
+  Why Pacer is different
+  - Small, composable primitives focused on pacing concerns rather than a broad framework.
+  - Rich instance API (flush, cancel, start/stop, reset, setOptions) and advanced configuration (dynamic `wait`, `enabled` functions, priority/getShouldExecute hooks).
+  - Reactive state with opt-in selectors and a `Subscribe` component makes UI integration efficient and precise.
 
-  - Hook-level selector (3rd argument) to opt into specific state reactivity
-  - Instance `.Subscribe` component for deep/tree subscriptions
-
-  ## Run locally
-
-  ```bash
-  npm install
-  npm run dev
-````
-
-Build:
-
-```bash
-npm run build
-```
-
-## Key files
-
-- `src/App.tsx` — all five demos
-- `src/App.css` + `src/index.css` — layout/theme styles
-- `src/main.tsx` — wraps the app with `PacerProvider`
+  See the demo implementation in [src/App.tsx](src/App.tsx).
   extends: [
+```
