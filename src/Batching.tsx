@@ -7,11 +7,9 @@ import { Stat } from "./components/Stat";
 import type { BatchItem, BatchResult } from "./type/general";
 import { safeId } from "./utils/general";
 import { useState } from "react";
-import { Pill } from "./components/Pill";
 import { CodeBlock } from "./components/CodeBlock";
 
 export function BatchingDemo() {
-  const [started, setStarted] = useState(true);
   const [maxSize, setMaxSize] = useState(5);
   const [waitMs, setWaitMs] = useState(800);
   const [text, setText] = useState("event");
@@ -25,7 +23,7 @@ export function BatchingDemo() {
       );
     },
     {
-      started,
+      started: true,
       maxSize,
       // Advanced config: wait as function (dynamic)
       wait: (b) => Math.max(150, waitMs - b.store.state.size * 50),
@@ -51,6 +49,14 @@ export function BatchingDemo() {
     }),
   );
 
+  const coreSnippet = `const batcher = useBatcher(flushHandler, {
+  maxSize: ${maxSize},
+  wait: (b) => Math.max(150, ${waitMs} - b.store.state.size * 50),
+  getShouldExecute: (items) => items.some((i) => i.payload.includes('!now')),
+})
+
+batcher.addItem({ id, payload })`;
+
   function addOne(payload: string) {
     batcher.addItem({ id: safeId("item"), payload });
   }
@@ -61,12 +67,37 @@ export function BatchingDemo() {
     }
   }
 
+  function clearLogs() {
+    setEvents([]);
+    setBatches([]);
+  }
+
   return (
     <Card
       title="Batching"
       subtitle="Collect items and process them together (by size, timeout, or custom trigger). Great for bulk API calls and analytics."
     >
       <div className="content">
+        <div className="help">
+          <div className="helpTitle">How to try</div>
+          <ul className="helpList">
+            <li>
+              Click <b>Add 10</b> to trigger a size-based flush (via Max size).
+            </li>
+            <li>
+              Wait after adding: it will flush after a timeout (dynamic wait).
+            </li>
+            <li>
+              Put <b>!now</b> in the item text to force an immediate flush.
+            </li>
+          </ul>
+        </div>
+
+        <details className="details">
+          <summary>Core snippet</summary>
+          <CodeBlock value={coreSnippet} />
+        </details>
+
         <Row>
           <Field label="Item text">
             <input
@@ -102,15 +133,23 @@ export function BatchingDemo() {
           </Field>
         </Row>
 
-        <Row>
-          <Field label="Started">
-            <input
-              type="checkbox"
-              checked={started}
-              onChange={(e) => setStarted(e.target.checked)}
-            />
-          </Field>
-        </Row>
+        <div className="help">
+          <div className="helpTitle">What the key options mean</div>
+          <ul className="helpList">
+            <li>
+              <b>maxSize</b>: flush as soon as the batch reaches this many
+              items.
+            </li>
+            <li>
+              <b>wait</b>: time-based flush; this demo shortens the wait as the
+              batch grows.
+            </li>
+            <li>
+              <b>getShouldExecute</b>: custom “flush now” rule (here: any
+              payload contains <b>!now</b>).
+            </li>
+          </ul>
+        </div>
 
         <ButtonBar>
           <button className="btn" onClick={() => addOne(text)}>
@@ -120,21 +159,29 @@ export function BatchingDemo() {
             Add 10
           </button>
           <button className="btn" onClick={() => batcher.flush()}>
-            Flush
-          </button>
-          <button className="btn" onClick={() => batcher.cancel()}>
-            Cancel
-          </button>
-          <button className="btn" onClick={() => batcher.clear()}>
-            Clear
+            Flush now
           </button>
           <button className="btn" onClick={() => batcher.reset()}>
             Reset
           </button>
+          <button className="btn" onClick={clearLogs}>
+            Clear logs
+          </button>
         </ButtonBar>
 
+        <details className="details">
+          <summary>Advanced controls</summary>
+          <ButtonBar>
+            <button className="btn" onClick={() => batcher.cancel()}>
+              Cancel pending
+            </button>
+            <button className="btn" onClick={() => batcher.clear()}>
+              Clear pending items
+            </button>
+          </ButtonBar>
+        </details>
+
         <div className="stats">
-          <Stat label="Status" value={<Pill>{batcher.state.status}</Pill>} />
           <Stat label="Pending" value={String(batcher.state.isPending)} />
           <Stat label="Size" value={batcher.state.size} />
           <Stat label="Exec" value={batcher.state.executionCount} />
@@ -178,7 +225,7 @@ export function BatchingDemo() {
         </Row>
 
         <details className="details">
-          <summary>Full batcher state (Subscribe)</summary>
+          <summary>Advanced: full batcher state</summary>
           <batcher.Subscribe selector={(s) => s}>
             {(s) => <CodeBlock value={s} />}
           </batcher.Subscribe>

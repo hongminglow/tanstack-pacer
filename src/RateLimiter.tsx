@@ -11,11 +11,10 @@ import { Row } from "./components/Row";
 import { Stat } from "./components/Stat";
 import { ButtonBar } from "./components/ButtonBar";
 import { CodeBlock } from "./components/CodeBlock";
-import { useNow } from "./hooks/useNow";
+import { ToggleField } from "./components/ToggleField";
 import { formatMs } from "./utils/general";
 
 export function RateLimiterDemo() {
-  const now = useNow(250);
   const [enabled, setEnabled] = useState(true);
   const [limit, setLimit] = useState(5);
   const [windowMs, setWindowMs] = useState(5000);
@@ -41,9 +40,16 @@ export function RateLimiterDemo() {
     (state) => ({
       executionCount: state.executionCount,
       rejectionCount: state.rejectionCount,
-      executionTimes: state.executionTimes,
     }),
   );
+
+  const coreSnippet = `// Core idea: "allow only ${limit} calls per ${windowMs}ms"
+const rateLimiter = useRateLimiter(fn, {
+  ...rateLimiterOptions({ limit: ${limit}, window: ${windowMs} }),
+  windowType: "${windowType}",
+})
+
+rateLimiter.maybeExecute(payload)`;
 
   const remaining = rateLimiter.getRemainingInWindow();
   const msUntilNextWindow = rateLimiter.getMsUntilNextWindow();
@@ -73,6 +79,28 @@ export function RateLimiterDemo() {
       subtitle="Enforce hard caps within a time window (API quotas, abuse prevention). Calls beyond the limit are rejected until the window resets."
     >
       <div className="content">
+        <div className="help">
+          <div className="helpTitle">How to try</div>
+          <ul className="helpList">
+            <li>
+              Click <b>Burst 10</b> to exceed the limit and trigger rejects.
+            </li>
+            <li>
+              Watch <b>Remaining</b> drop to 0, then wait for the window to
+              reset.
+            </li>
+            <li>
+              Switch <b>Fixed</b> vs <b>Sliding</b> to see how “refill” timing
+              changes.
+            </li>
+          </ul>
+        </div>
+
+        <details className="details">
+          <summary>Core snippet</summary>
+          <CodeBlock value={coreSnippet} />
+        </details>
+
         <Row>
           <Field label={`Limit: ${limit} per window`}>
             <input
@@ -118,14 +146,30 @@ export function RateLimiterDemo() {
               </label>
             </div>
           </Field>
-          <Field label="Enabled">
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
-            />
-          </Field>
+          <ToggleField
+            label="Enabled"
+            checked={enabled}
+            onChange={setEnabled}
+          />
         </Row>
+
+        <div className="help">
+          <div className="helpTitle">What the key options mean</div>
+          <ul className="helpList">
+            <li>
+              <b>limit</b> + <b>window</b>: the quota and the time range it
+              applies to.
+            </li>
+            <li>
+              <b>windowType=fixed</b>: resets in chunks; you can burst again
+              after the reset.
+            </li>
+            <li>
+              <b>windowType=sliding</b>: a moving window; capacity “returns”
+              gradually over time.
+            </li>
+          </ul>
+        </div>
 
         <ButtonBar>
           <button className="btn" onClick={() => send(1)}>
@@ -146,7 +190,6 @@ export function RateLimiterDemo() {
           />
           <Stat label="Instant clicks" value={instantCount} />
           <Stat label="Allowed" value={limitedCount} />
-          <Stat label="Executions" value={rateLimiter.state.executionCount} />
           <Stat label="Rejected" value={rateLimiter.state.rejectionCount} />
           <Stat label="Remaining" value={remaining} />
           <Stat label="Next window in" value={formatMs(msUntilNextWindow)} />
@@ -154,14 +197,10 @@ export function RateLimiterDemo() {
             label="Last reject (ms)"
             value={lastRejectMs != null ? lastRejectMs : "—"}
           />
-          <Stat
-            label="Tick"
-            value={<span className="muted">{Math.floor(now / 1000)}s</span>}
-          />
         </div>
 
         <details className="details">
-          <summary>Full rate limiter state (Subscribe)</summary>
+          <summary>Advanced: full rate limiter state</summary>
           <rateLimiter.Subscribe selector={(s) => s}>
             {(s) => <CodeBlock value={s} />}
           </rateLimiter.Subscribe>

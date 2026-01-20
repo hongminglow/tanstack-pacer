@@ -1,12 +1,12 @@
 import "./App.css";
 import { useState } from "react";
-import { Pill } from "./components/Pill";
 import { Card } from "./components/Card";
 import { Field } from "./components/Field";
 import { Row } from "./components/Row";
 import { Stat } from "./components/Stat";
 import { ButtonBar } from "./components/ButtonBar";
 import { CodeBlock } from "./components/CodeBlock";
+import { ToggleField } from "./components/ToggleField";
 import { useNow } from "./hooks/useNow";
 import { formatMs } from "./utils/general";
 import { useThrottler } from "@tanstack/react-pacer";
@@ -25,13 +25,21 @@ export function ThrottlerDemo() {
     setThrottledValue,
     { wait: waitMs, leading, trailing },
     (state) => ({
-      status: state.status,
       isPending: state.isPending,
       executionCount: state.executionCount,
       lastExecutionTime: state.lastExecutionTime,
       nextExecutionTime: state.nextExecutionTime,
     }),
   );
+
+  const coreSnippet = `// Core idea: "run at most once per ${waitMs}ms window"
+const throttler = useThrottler(setThrottledValue, {
+  wait: ${waitMs},
+  leading: ${leading},
+  trailing: ${trailing},
+})
+
+throttler.maybeExecute(nextValue)`;
 
   function onRange(e: React.ChangeEvent<HTMLInputElement>) {
     const next = parseInt(e.target.value, 10);
@@ -51,6 +59,29 @@ export function ThrottlerDemo() {
       subtitle="Guarantee at most one execution per window. Useful for scroll/drag handlers and expensive UI updates."
     >
       <div className="content">
+        <div className="help">
+          <div className="helpTitle">How to try</div>
+          <ul className="helpList">
+            <li>
+              Drag the slider quickly: the throttled value updates at most once
+              per window.
+            </li>
+            <li>
+              Turn off <b>Trailing</b> to stop the “final” update after you stop
+              dragging.
+            </li>
+            <li>
+              Turn off <b>Leading</b> to delay the first update until the window
+              passes.
+            </li>
+          </ul>
+        </div>
+
+        <details className="details">
+          <summary>Core snippet</summary>
+          <CodeBlock value={coreSnippet} />
+        </details>
+
         <Row>
           <Field
             label={`Drag (instant: ${instantValue}, throttled: ${throttledValue})`}
@@ -78,36 +109,47 @@ export function ThrottlerDemo() {
               onChange={(e) => setWaitMs(parseInt(e.target.value, 10))}
             />
           </Field>
-          <Field label="Leading">
-            <input
-              type="checkbox"
-              checked={leading}
-              onChange={(e) => setLeading(e.target.checked)}
-            />
-          </Field>
-          <Field label="Trailing">
-            <input
-              type="checkbox"
-              checked={trailing}
-              onChange={(e) => setTrailing(e.target.checked)}
-            />
-          </Field>
+          <ToggleField
+            label="Leading"
+            checked={leading}
+            onChange={setLeading}
+          />
+          <ToggleField
+            label="Trailing"
+            checked={trailing}
+            onChange={setTrailing}
+          />
         </Row>
 
-        <ButtonBar>
-          <button className="btn" onClick={() => throttler.flush()}>
-            Flush
-          </button>
-          <button className="btn" onClick={() => throttler.cancel()}>
-            Cancel
-          </button>
-          <button className="btn" onClick={() => throttler.reset()}>
-            Reset
-          </button>
-        </ButtonBar>
+        <div className="help">
+          <div className="helpTitle">What the key options mean</div>
+          <ul className="helpList">
+            <li>
+              <b>leading</b>: execute immediately when the window opens.
+            </li>
+            <li>
+              <b>trailing</b>: execute once more at the end of the window with
+              the latest value.
+            </li>
+          </ul>
+        </div>
+
+        <details className="details">
+          <summary>Advanced controls</summary>
+          <ButtonBar>
+            <button className="btn" onClick={() => throttler.flush()}>
+              Flush now
+            </button>
+            <button className="btn" onClick={() => throttler.cancel()}>
+              Cancel pending
+            </button>
+            <button className="btn" onClick={() => throttler.reset()}>
+              Reset
+            </button>
+          </ButtonBar>
+        </details>
 
         <div className="stats">
-          <Stat label="Status" value={<Pill>{throttler.state.status}</Pill>} />
           <Stat label="Pending" value={String(throttler.state.isPending)} />
           <Stat label="Instant moves" value={instantMoves} />
           <Stat label="Executions" value={throttler.state.executionCount} />
@@ -118,7 +160,7 @@ export function ThrottlerDemo() {
         </div>
 
         <details className="details">
-          <summary>Full throttler state (Subscribe)</summary>
+          <summary>Advanced: full throttler state</summary>
           <throttler.Subscribe selector={(s) => s}>
             {(s) => <CodeBlock value={s} />}
           </throttler.Subscribe>

@@ -1,12 +1,12 @@
 import "./App.css";
 import { useMemo, useState } from "react";
-import { Pill } from "./components/Pill";
 import { Card } from "./components/Card";
 import { Field } from "./components/Field";
 import { Row } from "./components/Row";
 import { Stat } from "./components/Stat";
 import { ButtonBar } from "./components/ButtonBar";
 import { CodeBlock } from "./components/CodeBlock";
+import { ToggleField } from "./components/ToggleField";
 import { useDebouncer } from "@tanstack/react-pacer";
 
 export function DebouncerDemo() {
@@ -28,12 +28,20 @@ export function DebouncerDemo() {
 
   // Uses the 3rd argument selector to opt-in to state updates (advanced config).
   const debouncer = useDebouncer(setDebouncedSearch, options, (state) => ({
-    status: state.status,
     isPending: state.isPending,
     executionCount: state.executionCount,
     lastArgs: state.lastArgs,
     canLeadingExecute: state.canLeadingExecute,
   }));
+
+  const coreSnippet = `// Core idea: "only run after the user stops typing"
+const debouncer = useDebouncer(setDebouncedSearch, {
+  wait: ${waitMs},
+  leading: ${leading},
+  enabled: () => enabled && instantSearch.trim().length > 2,
+})
+
+debouncer.maybeExecute(nextValue)`;
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const next = e.target.value;
@@ -47,6 +55,28 @@ export function DebouncerDemo() {
       subtitle="Collapse rapid changes into one call after a quiet period. Great for search boxes, resizing, or autosave."
     >
       <div className="content">
+        <div className="help">
+          <div className="helpTitle">How to try</div>
+          <ul className="helpList">
+            <li>
+              Type quickly, then stop: the debounced value updates after{" "}
+              {waitMs}ms.
+            </li>
+            <li>
+              Turn on <b>Leading</b> to fire immediately on the first keystroke
+              of a burst.
+            </li>
+            <li>
+              Turn off <b>Enabled</b> (or type &lt; 3 chars): nothing executes.
+            </li>
+          </ul>
+        </div>
+
+        <details className="details">
+          <summary>Core snippet</summary>
+          <CodeBlock value={coreSnippet} />
+        </details>
+
         <Row>
           <Field label="Type (executes once you pause)">
             <input
@@ -71,45 +101,49 @@ export function DebouncerDemo() {
               onChange={(e) => setWaitMs(parseInt(e.target.value, 10))}
             />
           </Field>
-          <Field label="Enabled (also requires 3+ chars)">
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
-            />
-          </Field>
-          <Field label="Leading edge">
-            <input
-              type="checkbox"
-              checked={leading}
-              onChange={(e) => setLeading(e.target.checked)}
-            />
-          </Field>
+          <ToggleField
+            label="Enabled (also requires 3+ chars)"
+            checked={enabled}
+            onChange={setEnabled}
+          />
+          <ToggleField
+            label="Leading"
+            checked={leading}
+            onChange={setLeading}
+          />
         </Row>
 
         <ButtonBar>
           <button className="btn" onClick={() => debouncer.flush()}>
-            Flush
-          </button>
-          <button className="btn" onClick={() => debouncer.cancel()}>
-            Cancel
+            Flush now
           </button>
           <button className="btn" onClick={() => debouncer.reset()}>
             Reset
           </button>
         </ButtonBar>
 
+        <div className="help">
+          <div className="helpTitle">What the key options mean</div>
+          <ul className="helpList">
+            <li>
+              <b>wait</b>: how long the input must be quiet before the callback
+              runs.
+            </li>
+            <li>
+              <b>leading</b>: also run immediately on the first call in a burst.
+            </li>
+            <li>
+              <b>enabled</b>: a gate—when it returns false, calls are ignored.
+            </li>
+          </ul>
+        </div>
+
         <div className="stats">
-          <Stat label="Status" value={<Pill>{debouncer.state.status}</Pill>} />
           <Stat label="Pending" value={String(debouncer.state.isPending)} />
           <Stat label="Executions" value={debouncer.state.executionCount} />
           <Stat
-            label="Last Args"
-            value={
-              debouncer.state.lastArgs
-                ? JSON.stringify(debouncer.state.lastArgs)
-                : "—"
-            }
+            label="Leading ready"
+            value={String(debouncer.state.canLeadingExecute)}
           />
         </div>
 
@@ -131,7 +165,7 @@ export function DebouncerDemo() {
         </Row>
 
         <details className="details">
-          <summary>Full debouncer state (Subscribe)</summary>
+          <summary>Advanced: full debouncer state</summary>
           <debouncer.Subscribe selector={(s) => s}>
             {(s) => <CodeBlock value={s} />}
           </debouncer.Subscribe>

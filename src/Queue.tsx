@@ -12,7 +12,6 @@ import { ButtonBar } from "./components/ButtonBar";
 import { CodeBlock } from "./components/CodeBlock";
 
 export function QueueDemo() {
-  const [started, setStarted] = useState(true);
   const [waitBaseMs, setWaitBaseMs] = useState(400);
   const [maxSize, setMaxSize] = useState(8);
   const [addTo, setAddTo] = useState<QueuePosition>("back");
@@ -31,7 +30,7 @@ export function QueueDemo() {
       setEvents((prev) => [`executed: ${item.label}`, ...prev].slice(0, 10));
     },
     {
-      started,
+      started: true,
       maxSize,
       addItemsTo: addTo,
       getItemsFrom: getFrom,
@@ -74,6 +73,18 @@ export function QueueDemo() {
     );
   }
 
+  function addMany(n: number) {
+    for (let i = 0; i < n; i += 1) {
+      addItem();
+    }
+  }
+
+  function clearLogs() {
+    setEvents([]);
+    setProcessed([]);
+    setLastBatch(null);
+  }
+
   function flushBatch() {
     queuer.flushAsBatch((items: TaskItem[]) => {
       setLastBatch(items);
@@ -90,6 +101,41 @@ export function QueueDemo() {
       subtitle="Queue work and process items over time (or when started). Useful for background sync, upload queues, and backpressure."
     >
       <div className="content">
+        <div className="help">
+          <div className="helpTitle">How to try</div>
+          <ul className="helpList">
+            <li>
+              Click <b>Add 10</b> to quickly populate the queue, then watch
+              items execute.
+            </li>
+            <li>
+              Click <b>Stop</b> to pause automatic processing, then use{" "}
+              <b>Step</b> to execute one item at a time.
+            </li>
+            <li>
+              Lower <b>Max size</b> and spam <b>Add 10</b> to see rejects.
+            </li>
+            <li>
+              Switch <b>Get items from</b> to see FIFO (front) vs LIFO (back)
+              behavior.
+            </li>
+          </ul>
+        </div>
+
+        <details className="details">
+          <summary>Core snippet</summary>
+          <CodeBlock
+            value={`const queuer = useQueuer(processItem, {
+  maxSize: ${maxSize},
+  wait: (q) => ${waitBaseMs} + q.store.state.size * 75,
+  getPriority: (item) => item.priority,
+  expirationDuration: 8000,
+})
+
+queuer.addItem(item)`}
+          />
+        </details>
+
         <Row>
           <Field label="Label">
             <input
@@ -138,13 +184,6 @@ export function QueueDemo() {
         </Row>
 
         <Row>
-          <Field label="Started">
-            <input
-              type="checkbox"
-              checked={started}
-              onChange={(e) => setStarted(e.target.checked)}
-            />
-          </Field>
           <Field label="Add items to">
             <select
               className="select"
@@ -167,15 +206,33 @@ export function QueueDemo() {
           </Field>
         </Row>
 
+        <div className="help">
+          <div className="helpTitle">What the key options mean</div>
+          <ul className="helpList">
+            <li>
+              <b>maxSize</b>: backpressure; when full, new items can be
+              rejected.
+            </li>
+            <li>
+              <b>wait(queue)</b>: dynamic pacing; this demo increases delay as
+              the queue grows.
+            </li>
+            <li>
+              <b>getPriority</b>: higher priority items run first.
+            </li>
+            <li>
+              <b>expirationDuration</b>: drop items that sat too long (here:
+              8s).
+            </li>
+          </ul>
+        </div>
+
         <ButtonBar>
           <button className="btn" onClick={addItem}>
             Add item
           </button>
-          <button className="btn" onClick={() => queuer.execute()}>
-            Execute next
-          </button>
-          <button className="btn" onClick={() => queuer.flush(3)}>
-            Flush 3
+          <button className="btn" onClick={() => addMany(10)}>
+            Add 10
           </button>
           <button className="btn" onClick={flushBatch}>
             Flush as batch
@@ -188,11 +245,14 @@ export function QueueDemo() {
           >
             {queuer.state.isRunning ? "Stop" : "Start"}
           </button>
-          <button className="btn" onClick={() => queuer.clear()}>
-            Clear
+          <button className="btn" onClick={() => queuer.execute()}>
+            Step
           </button>
           <button className="btn" onClick={() => queuer.reset()}>
             Reset
+          </button>
+          <button className="btn" onClick={clearLogs}>
+            Clear logs
           </button>
         </ButtonBar>
 
@@ -200,7 +260,7 @@ export function QueueDemo() {
           <Stat label="Status" value={<Pill>{queuer.state.status}</Pill>} />
           <Stat label="Running" value={String(queuer.state.isRunning)} />
           <Stat label="Size" value={queuer.state.size} />
-          <Stat label="Exec" value={queuer.state.executionCount} />
+          <Stat label="Processed" value={processed.length} />
           <Stat label="Reject" value={queuer.state.rejectionCount} />
           <Stat label="Expire" value={queuer.state.expirationCount} />
         </div>
@@ -243,9 +303,9 @@ export function QueueDemo() {
             <div>
               <div className="k">Notes</div>
               <div className="muted">
-                Items can expire after 8s and rejects happen when the queue is
-                full. Priority (higher first) influences which item executes
-                next.
+                Try stopping the queue and stepping to understand ordering.
+                Items can expire after 8s; rejects happen when the queue is
+                full.
               </div>
             </div>
           </div>
@@ -259,7 +319,7 @@ export function QueueDemo() {
         ) : null}
 
         <details className="details">
-          <summary>Full queuer state (Subscribe)</summary>
+          <summary>Advanced: full queuer state</summary>
           <queuer.Subscribe selector={(s) => s}>
             {(s) => <CodeBlock value={s} />}
           </queuer.Subscribe>
